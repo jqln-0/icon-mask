@@ -5,7 +5,7 @@ package main
 #include <gtk/gtk.h>
 #cgo pkg-config: gtk+-2.0
 
-int iterate_array(gint *array) {
+gint *iter_array(gint *array) {
 	return array++;
 }
 */
@@ -25,8 +25,6 @@ type GTKIconProperties struct {
 	Scalable bool
 	// The name of the icon.
 	Name string
-	// The category of the icon ('app', 'emblem', etc.)
-	Category string
 }
 
 // GTKInit call gtk_init with the given program arguments.
@@ -119,7 +117,7 @@ func (t GTKTheme) GetIconSizes(icon string) (sizes []uint, isScalable bool) {
 		if size == -1 {
 			isScalable = true
 		} else {
-			sizes = append(sizes, size)
+			sizes = append(sizes, uint(size))
 		}
 	}
 
@@ -131,6 +129,9 @@ func (t GTKTheme) GetIconProperties(icon string) GTKIconProperties {
 	// Record the name of the icon.
 	var properties GTKIconProperties
 	properties.Name = icon
+
+	// Get the available sizes from GTK.
+	properties.Sizes, properties.Scalable = t.GetIconSizes(icon)
 
 	return properties
 }
