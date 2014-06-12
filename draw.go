@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"image"
 	"log"
-	"path"
-
 	"os"
+	"os/exec"
+	"path"
 )
 
 func loadImage(filename string) (image.Image, error) {
@@ -44,32 +44,32 @@ func createPath(outFile string) {
 	}
 }
 
-func (m *maskDrawer) ComposeSized(overlay string, outFile string) {
+func (m *maskDrawer) ComposeSized(overlay string, outFile string, size uint) {
 	// Make sure the parent directory exists.
 	createPath(outFile)
 
-	fmt.Printf("composing %v\n", outFile)
+	log.Printf("composing %v\n", outFile)
+	cmd := exec.Command("composite", "-gravity", "center", overlay, m.baseImage,
+		"-resize", fmt.Sprintf("%v,%v", size, size), outFile)
+	cmd.Run()
 }
 
 func (m *maskDrawer) ComposeSVG(overlay string, outFile string) {
-	// Make sure the parent directory exists.
-	createPath(outFile)
-
-	fmt.Printf("composing %v\n", outFile)
+	// TODO.
 }
 
 func (m *maskDrawer) CreateIcons(icon GTKIconProperties, outdir string) {
 	// Draw one icon for each available size.
 	for _, size := range icon.Sizes {
 		sizeStr := fmt.Sprintf("%vx%v", size, size)
-		outPath := path.Join(outdir, sizeStr, "masked", icon.Name+".png")
+		outPath := path.Join(outdir, sizeStr, "apps", icon.Name+".png")
 		filePath := m.theme.GetIcon(icon.Name, int(size))
-		m.ComposeSized(filePath, outPath)
+		m.ComposeSized(filePath, outPath, size)
 	}
 
 	// Draw a scaled icon if possible.
 	if icon.Scalable {
-		outPath := path.Join(outdir, "scalable", "masked", icon.Name+".svg")
+		outPath := path.Join(outdir, "scalable", "apps", icon.Name+".svg")
 		// TODO: Replace crazy constant with a flag.
 		filePath := m.theme.GetIcon(icon.Name, 1024)
 		m.ComposeSVG(filePath, outPath)
