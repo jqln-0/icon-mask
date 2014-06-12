@@ -19,7 +19,7 @@ You will need
  - A base image to 'mask' with.
 
 Running the program with the `--help` flag should guide you the rest of the
-way. An example execution for the 'Moka' is:
+way. An example execution for the 'Moka' theme is:
 
 ```bash
 $ icon-mask --extra-themes=Faba Moka base.png out
@@ -37,5 +37,5 @@ $ cp -r out/* /usr/share/icons/Moka/
  - Make SVG output work,
  - Consider using something less hacky than imagemagick calls,
  - Perform compositing concurrently,
- - Auto-generate symblinks?
+ - Auto-generate symlinks?
 
