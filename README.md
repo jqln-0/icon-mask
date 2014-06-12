@@ -35,7 +35,6 @@ $ cp -r out/* /usr/share/icons/Moka/
 ## TODO
 
  - Make SVG output work,
- - Consider using something less hacky than imagemagick calls,
  - Perform compositing concurrently,
  - Auto-generate symlinks?
 
