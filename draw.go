@@ -50,7 +50,7 @@ func (m *maskDrawer) ComposeSized(overlay string, outFile string, size uint) {
 
 	log.Printf("composing %v\n", outFile)
 	cmd := exec.Command("composite", "-gravity", "center", overlay, m.baseImage,
-		"-resize", fmt.Sprintf("%v,%v", size, size), outFile)
+		"-resize", fmt.Sprintf("%vx%v", size, size), outFile)
 	cmd.Run()
 }
 
