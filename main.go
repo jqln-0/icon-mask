@@ -6,6 +6,8 @@ import (
 	"os"
 	"runtime"
 	"strings"
+
+	"github.com/nfnt/resize"
 )
 
 func Usage() {
@@ -19,6 +21,7 @@ func main() {
 	filtThemesRaw := flag.String("extra-themes", "", "Comma seperated list of additional themes to filter.")
 	categoriesRaw := flag.String("categories", "apps,pixmaps", "Comma seperated list of categories to include.")
 	maxProcs := flag.Int("maxprocs", runtime.NumCPU(), "Number of threads to use.")
+	scale := flag.Float64("scale", 0.0, "Maximum size of overlay image, relative to output size.")
 
 	// Parse flags.
 	GTKInit(os.Args)
@@ -48,7 +51,8 @@ func main() {
 	mainTheme := CreateTheme(flag.Arg(0))
 
 	// Prepare the drawer.
-	drawer := CreateMaskDrawer(flag.Arg(1), mainTheme)
+	// TODO: Move interp to flags.
+	drawer := CreateMaskDrawer(flag.Arg(1), mainTheme, *scale, resize.Bicubic)
 
 	// Generate a chan containing the icons we need to generate.
 	source := GenerateIconNames(mainTheme)

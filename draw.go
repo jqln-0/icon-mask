@@ -1,12 +1,18 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"image"
+	"image/draw"
+	_ "image/jpeg"
+	"image/png"
 	"log"
 	"os"
-	"os/exec"
 	"path"
+	"sync"
+
+	"github.com/nfnt/resize"
 )
 
 func loadImage(filename string) (image.Image, error) {
@@ -26,14 +32,25 @@ func loadImage(filename string) (image.Image, error) {
 }
 
 type maskDrawer struct {
-	baseImage string
+	baseImage image.Image
 	theme     GTKTheme
+	sizeMutex sync.RWMutex
+	sizes     map[uint]image.Image
+	interp    resize.InterpolationFunction
+	scale     float64
 }
 
-func CreateMaskDrawer(base string, theme GTKTheme) *maskDrawer {
+func CreateMaskDrawer(base string, theme GTKTheme, scale float64, interp resize.InterpolationFunction) *maskDrawer {
 	var m maskDrawer
-	m.baseImage = base
+	img, err := loadImage(base)
+	if err != nil {
+		log.Fatal(err)
+	}
+	m.baseImage = img
 	m.theme = theme
+	m.sizes = make(map[uint]image.Image)
+	m.interp = interp
+	m.scale = scale
 	return &m
 }
 
@@ -44,18 +61,78 @@ func createPath(outFile string) {
 	}
 }
 
+func (m *maskDrawer) getScaled(size uint) image.Image {
+	// Check if a base image of this size has been cached.
+	m.sizeMutex.RLock()
+	img, ok := m.sizes[size]
+	m.sizeMutex.RUnlock()
+	if ok {
+		return img
+	}
+
+	// Not image was cached. We need to generate one.
+	defer m.sizeMutex.Unlock()
+	m.sizeMutex.Lock()
+
+	// We need to check again incase the image was cached between our locks.
+	img, ok = m.sizes[size]
+	if ok {
+		return img
+	}
+
+	// Create the scaled image.
+	img = resize.Resize(size, size, m.baseImage, m.interp)
+	m.sizes[size] = img
+	return img
+}
+
 func (m *maskDrawer) ComposeSized(overlay string, outFile string, size uint) {
 	// Make sure the parent directory exists.
 	createPath(outFile)
-
 	log.Printf("composing %v\n", outFile)
-	cmd := exec.Command("composite", "-gravity", "center", overlay, m.baseImage,
-		"-resize", fmt.Sprintf("%vx%v", size, size), outFile)
-	cmd.Run()
+
+	// Get the resized base image.
+	img := m.getScaled(size)
+
+	// Load the overlay image.
+	overlayImg, err := loadImage(overlay)
+	if err != nil {
+		log.Printf("Failed to compose %v: %v\n", outFile, err)
+		return
+	}
+
+	// Reduce the size of the overlay according to the scale.
+	scaledSize := uint(float64(size) * m.scale)
+	overlayImg = resize.Thumbnail(scaledSize, scaledSize, overlayImg, m.interp)
+
+	// Compose the images.
+	result := image.NewRGBA(img.Bounds())
+	draw.Draw(result, img.Bounds(), img, image.ZP, draw.Src)
+
+	// The overlay image should be drawn with an offset as it may be scaled down.
+	offset := (img.Bounds().Dx() - overlayImg.Bounds().Dx()) / 2
+	destPoint := image.Pt(offset, offset)
+	r := image.Rectangle{destPoint, destPoint.Add(overlayImg.Bounds().Size())}
+	draw.Draw(result, r, overlayImg, overlayImg.Bounds().Min, draw.Over)
+
+	// Write out the result.
+	fd, err := os.Create(outFile)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	defer fd.Close()
+
+	// TODO: Check using a buffered reader helps performance here.
+	writer := bufio.NewWriter(fd)
+
+	png.Encode(writer, result)
+	writer.Flush()
 }
 
 func (m *maskDrawer) ComposeSVG(overlay string, outFile string) {
 	// TODO.
+	log.Printf("Failed to compose %v: %v\n", outFile, "SVG not supported")
 }
 
 func (m *maskDrawer) CreateIcons(icon GTKIconProperties, outdir string) {
