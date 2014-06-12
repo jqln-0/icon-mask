@@ -10,10 +10,15 @@ gint *iter_array(gint *array) {
 }
 */
 import "C"
-import "unsafe"
+import (
+	"errors"
+	"strings"
+	"unsafe"
+)
 
 // GTKTheme is a simple wrapper around the C GTKIconTheme struct.
 type GTKTheme struct {
+	name  string
 	theme *C.GtkIconTheme
 }
 
@@ -25,6 +30,8 @@ type GTKIconProperties struct {
 	Scalable bool
 	// The name of the icon.
 	Name string
+	// The category of this icon (apps, emblems, etc.)
+	Category string
 }
 
 // GTKInit call gtk_init with the given program arguments.
@@ -48,6 +55,7 @@ func GTKInit(args []string) {
 func CreateTheme(name string) GTKTheme {
 	// Create a new blank theme.
 	var t GTKTheme
+	t.name = name
 	t.theme = C.gtk_icon_theme_new()
 
 	// Load the given theme name.
@@ -124,14 +132,33 @@ func (t GTKTheme) GetIconSizes(icon string) (sizes []uint, isScalable bool) {
 	return
 }
 
+func getCategoryFromPath(path string) string {
+	// TODO: Do this much better.
+	if strings.Contains(path, "/usr/share/pixmaps") {
+		return "pixmaps"
+	}
+
+	parts := strings.Split(path, "/")
+	return parts[len(parts)-2]
+}
+
 // GetIconProperties attempts to determine all the properties of the given icon name.
-func (t GTKTheme) GetIconProperties(icon string) GTKIconProperties {
+func (t GTKTheme) GetIconProperties(icon string) (GTKIconProperties, error) {
+	// Check the icon is valid.
+	if t.GetIcon(icon, 16) == "" {
+		return GTKIconProperties{}, errors.New("Invalid icon name: " + icon)
+	}
+
 	// Record the name of the icon.
 	var properties GTKIconProperties
 	properties.Name = icon
 
 	// Get the available sizes from GTK.
-	properties.Sizes, properties.Scalable = t.GetIconSizes(icon)
+	//properties.Sizes, properties.Scalable = t.GetIconSizes(icon)
 
-	return properties
+	// Deduce the category of the icon from the path name.
+	path := t.GetIcon(icon, 64)
+	properties.Category = getCategoryFromPath(path)
+
+	return properties, nil
 }
