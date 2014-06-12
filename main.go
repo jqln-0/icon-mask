@@ -48,7 +48,7 @@ func main() {
 	mainTheme := CreateTheme(flag.Arg(0))
 
 	// Prepare the drawer.
-	// TODO.
+	drawer := CreateMaskDrawer(flag.Arg(1), mainTheme)
 
 	// Generate a chan containing the icons we need to generate.
 	source := GenerateIconNames(mainTheme)
@@ -61,6 +61,6 @@ func main() {
 
 	// Generate and save an image for each icon.
 	for icon := range out {
-		fmt.Printf("%v,\t%v\n", icon.Name, icon.Category)
+		drawer.CreateIcons(icon, flag.Arg(2))
 	}
 }
