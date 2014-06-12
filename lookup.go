@@ -5,8 +5,8 @@ package main
 #include <gtk/gtk.h>
 #cgo pkg-config: gtk+-2.0
 
-gint *iter_array(gint *array) {
-	return array++;
+gint iter_array(gint **array) {
+	return *((*array)++);
 }
 */
 import "C"
@@ -120,8 +120,8 @@ func (t GTKTheme) GetIconSizes(icon string) (sizes []uint, isScalable bool) {
 	defer C.g_free(C.gpointer(cSizes))
 
 	// Convert the data into Go types.
-	for i := C.iter_array(cSizes); *i != 0; i = C.iter_array(i) {
-		size := int(*i)
+	for i := C.iter_array(&cSizes); i != 0; i = C.iter_array(&cSizes) {
+		size := int(i)
 		if size == -1 {
 			isScalable = true
 		} else {
@@ -154,7 +154,7 @@ func (t GTKTheme) GetIconProperties(icon string) (GTKIconProperties, error) {
 	properties.Name = icon
 
 	// Get the available sizes from GTK.
-	//properties.Sizes, properties.Scalable = t.GetIconSizes(icon)
+	properties.Sizes, properties.Scalable = t.GetIconSizes(icon)
 
 	// Deduce the category of the icon from the path name.
 	path := t.GetIcon(icon, 64)
