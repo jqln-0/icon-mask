@@ -29,7 +29,7 @@ You can then add the generated icons to the chosen theme by simply merging the
 output and theme folders;
 
 ```bash
-# cp -r out/* /usr/share/icons/Moka/
+$ cp -r out/* /usr/share/icons/Moka/
 ```
 
 ## TODO
